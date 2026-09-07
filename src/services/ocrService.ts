@@ -1,0 +1,21 @@
+import Tesseract from 'tesseract.js';
+
+export async function extractTextFromImage(imageFile: File | string, onProgress?: (progress: number) => void): Promise<string> {
+  try {
+    const result = await Tesseract.recognize(
+      imageFile,
+      'eng',
+      {
+        logger: m => {
+          if (m.status === 'recognizing text' && onProgress) {
+            onProgress(m.progress);
+          }
+        }
+      }
+    );
+    return result.data.text;
+  } catch (error) {
+    console.error('OCR Error:', error);
+    throw new Error('Failed to extract text from the image.');
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Shield,
   ShieldCheck,
@@ -43,7 +43,9 @@ function Logo() {
 
 function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [originalResult, setOriginalResult] = useState<AnalysisResult | null>(null);
   const [input, setInput] = useState('');
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
 
   const scrollToAnalyzer = () => {
     document.getElementById('analyzer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -52,16 +54,61 @@ function App() {
   const handleDemoSelect = (text: string) => {
     setInput(text);
     setResult(null);
+    setOriginalResult(null);
     scrollToAnalyzer();
   };
 
+  const handleAnalysisResult = (r: AnalysisResult) => {
+    setOriginalResult(r);
+    setResult(r); // Initially english
+    if (lang === 'hi') {
+      translateResult(r, 'hi');
+    }
+  };
+
+  const translateResult = async (r: AnalysisResult, targetLang: 'en' | 'hi') => {
+    if (targetLang === 'en') {
+      setResult(originalResult);
+      return;
+    }
+    
+    // Quick local mock translation if real API isn't wired up, or we can use the backend API
+    // To save time and keep it simple for hackathon, we fetch the translation for the contextual summary and recommended actions.
+    try {
+      const { translateText } = await import('@/services/translationService');
+      const translatedSummary = await translateText(r.contextSummary);
+      const translatedActions = await Promise.all(r.recommendedActions.map(a => translateText(a)));
+      const translatedSignals = await Promise.all(r.signals.map(async s => ({
+        ...s,
+        explanation: await translateText(s.explanation)
+      })));
+
+      setResult({
+        ...r,
+        contextSummary: translatedSummary,
+        recommendedActions: translatedActions,
+        signals: translatedSignals,
+      });
+    } catch (e) {
+      console.error('Failed to translate result');
+    }
+  };
+
+  useEffect(() => {
+    if (originalResult) {
+      translateResult(originalResult, lang);
+    }
+  }, [lang, originalResult]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
-      {/* Ambient background */}
+      {/* Ambient cybersecurity background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-cyan-600/10 blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-cyan-600/10 blur-[120px] animate-pulse-slow" />
         <div className="absolute top-1/3 -right-40 h-[400px] w-[400px] rounded-full bg-blue-700/10 blur-[100px]" />
-        <div className="absolute bottom-0 -left-40 h-[400px] w-[400px] rounded-full bg-cyan-500/5 blur-[100px]" />
+        <div className="absolute bottom-0 -left-40 h-[400px] w-[400px] rounded-full bg-violet-600/10 blur-[100px] animate-pulse-slow" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-50"></div>
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent animate-scan-line"></div>
       </div>
 
       {/* Header */}
@@ -72,55 +119,59 @@ function App() {
             <a href="#analyzer" className="transition hover:text-white">Analyze</a>
             <a href="#how" className="transition hover:text-white">How It Works</a>
             <a href="#about" className="transition hover:text-white">About</a>
-            <a href="#privacy" className="transition hover:text-white">Privacy</a>
+            <div className="h-4 w-px bg-white/10"></div>
+            <button 
+              onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
+              className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5 font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10"
+            >
+              {lang === 'en' ? 'EN' : 'हिंदी'}
+            </button>
           </nav>
-          <button
-            onClick={scrollToAnalyzer}
-            className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300 ring-1 ring-cyan-500/20 transition hover:bg-cyan-500/20"
-          >
-            Analyze Now
-          </button>
         </div>
       </header>
 
       <main className="relative mx-auto max-w-6xl px-4 sm:px-6">
         {/* Hero */}
-        <section className="pb-10 pt-16 text-center sm:pt-24">
+        <section className="pb-10 pt-16 text-center sm:pt-24 animate-fade-in">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/[0.06] px-3 py-1 text-xs font-medium text-cyan-300">
-            <ScanLine className="h-3.5 w-3.5" />
-            AI-Powered Scam & Coercion Detection
+            <ShieldCheck className="h-3.5 w-3.5" />
+            AI-Assisted Contextual Analysis
           </div>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white sm:text-6xl">
-            Think Before You Pay.
+            Think Before You <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Pay.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
-            UPI-Shield detects contextual scam, coercion and social-engineering signals hidden
-            inside digital payment messages.
+            UPI-Shield detects contextual scam, coercion and social-engineering signals hidden inside digital payment messages and screenshots.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
-            <button
-              onClick={scrollToAnalyzer}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-7 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400"
-            >
-              <ShieldCheck className="h-4 w-4" /> Analyze a Message
-            </button>
-            <p className="text-xs text-slate-500">Analyze SMS • WhatsApp • UPI Messages</p>
+            <div className="flex gap-4">
+              <button
+                onClick={scrollToAnalyzer}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-7 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400"
+              >
+                <ScanLine className="h-4 w-4" /> Analyze a Message
+              </button>
+              <button
+                onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Try Demo
+              </button>
+            </div>
+            <div className="flex gap-4 mt-4 text-xs font-medium text-slate-500">
+              <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-cyan-500"/> Context-Aware</span>
+              <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-cyan-500"/> AI-Assisted</span>
+              <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-cyan-500"/> English + हिंदी</span>
+            </div>
           </div>
-          <button
-            onClick={scrollToAnalyzer}
-            className="mx-auto mt-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-500 transition hover:border-cyan-500/30 hover:text-cyan-300"
-            aria-label="Scroll to analyzer"
-          >
-            <ArrowDown className="h-4 w-4 animate-bounce" />
-          </button>
         </section>
 
         {/* Analyzer + Results */}
         <section className="pb-12">
-          <Analyzer onResult={setResult} input={input} setInput={setInput} />
+          <Analyzer onResult={handleAnalysisResult} input={input} setInput={setInput} />
 
           {result && (
-            <div className="mt-6 space-y-5">
+            <div className="mt-6 space-y-5 animate-slide-up">
               {/* Threat assessment */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -169,7 +220,7 @@ function App() {
               )}
 
               {/* Safety Warning */}
-              <SafetyWarning level={result.riskLevel} />
+              <SafetyWarning level={result.riskLevel} lang={lang} />
 
               {/* Why flagged */}
               {result.signals.length > 0 && (

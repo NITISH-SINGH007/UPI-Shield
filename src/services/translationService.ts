@@ -58,3 +58,25 @@ export function getSafetyCopy(riskLevel: string, lang: 'en' | 'hi'): SafetyCopy 
   const set = lang === 'hi' ? hindi : english;
   return set[key] ?? set.low;
 }
+
+export async function translateText(text: string): Promise<string> {
+  if (!text) return text;
+  
+  try {
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, targetLang: 'hi' }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Translation API failed');
+    }
+
+    const data = await response.json();
+    return data.translatedText || text;
+  } catch (error) {
+    console.error('Translation failed:', error);
+    return text; // Return original text on failure
+  }
+}
